@@ -1,0 +1,52 @@
+---
+title: "Homework Assignment 1"
+author: "Jennifer Bae"
+output: pdf_document
+date: "2023-01-20"
+---
+
+```{r, setup, include = FALSE}
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, stringr, readxl,data.table, gdata, scales, kableExtra)
+
+```
+
+```{r, include = FALSE}
+load("Hwk1_workspace.Rdata")
+```
+
+## Enrollment Data
+
+# 1. How many observations are in your current dataset?
+There are 19126783 observations in my dataset full.ma.data
+
+
+# 2. How many different plan_types are there?
+
+```{r}
+# took out 1 from the total plan_types because one was categorized as "NA"
+unique_type <- unique(full.ma.data$plan_type)
+unique_type
+```
+There are 26 different plan_types in full.ma.data
+
+
+# 3. Provide a table of the count of plans under each plan type in each year
+
+```{r, echo= FALSE}
+library(knitr)
+library(kableExtra)
+        
+plan_count <- full.ma.data %>% 
+  group_by(year, plan_type) %>%
+  select (year, plan_type) %>%
+  summarize(plan_count=n())
+
+year_table <- pivot_wider(plan_count, names_from = year, values_from = plan_count)
+
+knitr::kable (year_table, col.names=c("2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015"), 
+type="pdf", caption = "Plan Count by Year", booktabs = TRUE)
+
+
+```
