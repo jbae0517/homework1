@@ -42,7 +42,6 @@ view(plan.type.year1)
 
 final.plans <- full.ma.data %>%
   filter(snp == "No" & eghp == "No" & (planid <800 | planid >= 900))
-  
 
 plan.type.year2 <- final.plans %>% 
   group_by(plan_type, year) %>%
@@ -57,7 +56,6 @@ view(plan.type.year2)
 
 library(ggplot2)
 
-#5 
 
 
 final.data <- full.ma.data %>%

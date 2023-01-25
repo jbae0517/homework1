@@ -1,5 +1,5 @@
 ---
-title: "bae-j-hwk-1-2"
+title: "Homework Assignment: bae-j-hwk-1-2"
 output: pdf_document
 date: "2023-01-25"
 ---
@@ -20,15 +20,15 @@ plan.premiums <- readRDS("/Users/jenniferbae/Downloads/ECON 470 R Coding/homewor
 load("Hwk1_workspace.Rdata")
 ```
 
-## Enrollment Data
+# Enrollment Data
 
-# 1. How many observations are in your current dataset?
+## 1. How many observations are in your current dataset?
 There are 19126783 observations in my dataset full.ma.data
 
 
-# 2. How many different plan_types are there?
+## 2. How many different plan_types are there?
 
-```{r, include=FALSE=FALSE}
+```{r, include=FALSE}
 # took out 1 from the total plan_types because one was categorized as "NA"
 
 unique_type <- unique(full.ma.data$plan_type)
@@ -36,9 +36,8 @@ unique_type
 ```
 There are 26 different plan_types in full.ma.data
 
-`r fdjkajfld`
 
-# 3. Provide a table of the count of plans under each plan type in each year
+## 3. Provide a table of the count of plans under each plan type in each year
 ```{r, echo=FALSE}
 
 library(knitr)
@@ -48,21 +47,26 @@ plan.type.year1 <- full.ma.data %>%
   count() %>%
   arrange (year, -n) %>%
   filter (plan_type!= "NA")
-plan.type.year1 <- pivot_wider(plan.type.year1, names_from = "year", values_from = "n", names_prefix = "Count_")
-view(plan.type.year1)
+plan.type.year1 <- pivot_wider(plan.type.year1, names_from = "year", values_from = "n")
+
+knitr::kable (plan.type.year1)
+
 
 ```
 
-```{r plantype1, echo= F, eval=T}
 
-knitr::kable(plan.type.year1, 
-             col.names=c("Plan Type,","2007", "2008", "2009", "2010", "2011", 
-                         "2012", "2013", "2014", "2015"),
-             format.args=list(big.mark=","),
-             caption = "Plan Type by Year") %>%
-  
-```
 
 ## 4. Remove all special needs plans (SNP), employer group plans (eghp), and all “800-series” plans. Provide an updated version of Table 1 after making these exclusions.
+```{r, echo=FALSE}
 
-fig.avg.enrollment
+final.plans <- full.ma.data %>%
+  filter(snp == "No" & eghp == "No" & (planid <800 | planid >= 900))
+
+plan.type.year2 <- final.plans %>% 
+  group_by(plan_type, year) %>%
+  count () %>%
+  arrange (year, -n)
+plan.type.year2 <- pivot_wider(plan.type.year2, names_from = "year", values_from = "n")
+
+knitr::kable (plan.type.year2)
+```
