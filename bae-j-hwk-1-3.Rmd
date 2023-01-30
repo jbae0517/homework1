@@ -1,0 +1,177 @@
+---
+title: "Homework Assignment: bae-j-hwk-1-3"
+output: pdf_document
+date: "2023-01-30"
+---
+
+```{r setup, include=FALSE}
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, stringr, readxl, data.table, gdata,scales)
+
+full.ma.data <- readRDS("/Users/jenniferbae/Downloads/ECON 470 R Coding/homework1/data/output/full_ma_data.rds")
+contract.services.area <- readRDS("/Users/jenniferbae/Downloads/ECON 470 R Coding/homework1/data/output/contract_service_area.rds")
+ma.penetration.data <- readRDS("/Users/jenniferbae/Downloads/ECON 470 R Coding/homework1/data/output/ma_penetration.rds")
+plan.premiums <- readRDS("/Users/jenniferbae/Downloads/ECON 470 R Coding/homework1/data/output/plan_premiums.rds")
+
+```
+
+```{r, include=FALSE}
+load("Hwk1_workspace.Rdata")
+```
+
+# Enrollment Data
+
+## 1. How many observations are in your current dataset?
+There are 19126783 observations in my dataset full.ma.data
+
+
+## 2. How many different plan_types are there?
+
+```{r, include=FALSE}
+# took out 1 from the total plan_types because one was categorized as "NA"
+
+unique_type <- unique(full.ma.data$plan_type)
+unique_type
+```
+There are 26 different plan_types in full.ma.data
+
+
+## 3. Provide a table of the count of plans under each plan type in each year
+```{r, echo=FALSE}
+
+library(knitr)
+
+plan.type.year1 <- full.ma.data %>%
+  group_by(plan_type, year) %>%
+  count() %>%
+  arrange (year, -n) %>%
+  filter (plan_type!= "NA")
+plan.type.year1 <- pivot_wider(plan.type.year1, names_from = "year", values_from = "n")
+
+knitr::kable (plan.type.year1)
+
+
+```
+
+
+
+## 4. Remove all special needs plans (SNP), employer group plans (eghp), and all “800-series” plans. Provide an updated version of Table 1 after making these exclusions.
+
+```{r, echo=FALSE}
+
+final.plans <- full.ma.data %>%
+  filter(snp == "No" & eghp == "No" & (planid <800 | planid >= 900))
+
+plan.type.year2 <- final.plans %>% 
+  group_by(plan_type, year) %>%
+  count () %>%
+  arrange (year, -n)
+plan.type.year2 <- pivot_wider(plan.type.year2, names_from = "year", values_from = "n")
+
+knitr::kable (plan.type.year2)
+```
+
+
+
+
+## 5. Provide a graph showing the average number of Medicare Advantage enrollees per county from 2008 to 2015
+
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+
+final.data <- full.ma.data %>%
+  inner_join(contract.services.area %>% 
+               select(contractid, fips, year), 
+             by=c("contractid", "fips", "year")) %>%
+  filter(!is.na(avg_enrollment))
+
+
+
+fig.avg.enrollment <- final.data %>%
+  group_by(fips, year) %>%
+  select(fips, year, avg_enrollment) %>%
+  summarize(all_enroll = sum(avg_enrollment)) %>%
+  ggplot(aes(x=as.factor(year), y = all_enroll, ggtitle("Average Number of Medicare Advantage Enrollees per County"))) +
+
+
+  stat_summary(fun.y="mean", geom = "bar") +
+  labs(
+    x= "Year",
+    y= "People",
+    title =""
+    ) +scale_y_continuous(labels=comma) +
+  theme_bw()
+
+fig.avg.enrollment
+
+```
+
+
+## 6. Provide a graph showing the average premium over time 
+```{r, echo=FALSE, warning=FALSE}
+#joining the market penetration data 
+final.data <- final.data %>%
+  left_join(ma.penetration.data %>% ungroup() %>% select(-ssa) %>%
+              rename(state_long=state, county_long=county), 
+            by=c("fips", "year"))
+
+final.state <- final.data %>% 
+  group_by(state) %>% 
+  summarize(state_name=last(state_long, na.rm=TRUE))
+
+final.data <- final.data %>%
+  left_join(final.state,
+            by=c("state"))
+
+#merging plan characteristics data 
+final.data <- final.data %>%
+  left_join(plan.premiums,
+            by=c("contractid","planid","state_name"="state","county","year"))
+
+
+#graph showing the average premium over time 
+fig.avg.premium <- final.data%>%
+  group_by(year) %>%
+  summarize(avg_premium = mean(premium, na.rm = TRUE)) %>%
+  ggplot(aes(year,avg_premium)) +
+  geom_line()+
+  xlab("Year") +
+  ylab("Average Premium ($)") +
+  theme_bw()
+
+fig.avg.premium
+```
+
+
+
+
+## 7. Provide a graph showing the percentage of $0 premium plans over time
+
+```{r, echo=FALSE, warning=FALSE}
+fig.percent.zero.premium <- final.data %>%
+  filter(!is.na(premium)) %>%
+  group_by(year) %>%
+  summarize(zero_premium = ((sum(premium==0))/n())* 100) %>%
+  ggplot(aes(year,zero_premium))+
+  geom_line() +
+  xlab("Year") +
+  ylab("Percentage of $0 Premium plans") +
+  theme_bw()
+
+fig.percent.zero.premium
+```
+
+
+## 8. Why did we drop the "800-series" plans?
+
+800 series plans are Employer Group Waiver Plans (EGWPs), offered by third parties to employers and union group sponsors. Therefore, the beneficiaries don't actually have a contract with CMS in these plans, which is why we dropped them. 
+
+## 9. Why do so many plans charge a $0 premium? What does that really mean to a beneficiary?
+
+Many plans charge a $0 premium because it is an appealing factor to attract a huge pool of healthy, low-cost beneficiaries. However, this could mean that their out of pocket costs, such as co-pay, co-insurance, and deductibles could be much higher than plans with higher premiums. 
+
+## 10. Briefly describe your experience working with these data. Tell me one thing you learned and one thing that really aggravated you.
+
+It was super challenging to work with so many datasets, especially since I've never dealt with data this big before. It took my laptop forever to load and sort through data, which made me frustrated at times. From this homework assignment, I learned how to code, make tables & graphs, and organize/merge datasets in R. 
+
